@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Mi app de repaso</title>
+    <link href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            margin: 0;
+            padding: 0;
+        }
+        .left {
+            width: 60%;
+            padding: 20px;
+        }
+        .right {
+            width: 40%;
+            padding: 20px;
+            border-left: 1px solid #ccc;
+        }
+        .today-box {
+            background: #f0f0f0;
+            padding: 10px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+        }
+        .tema-link {
+            color: blue;
+            cursor: pointer;
+            text-decoration: underline;
+        }
+        #volver {
+            margin-top: 10px;
+            display: none;
+            cursor: pointer;
+            color: red;
+            text-decoration: underline;
+        }
+        .acciones {
+            margin-top: 5px;
+        }
+        .acciones a {
+            margin-right: 10px;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="left">
+        <h2>Subir nuevo tema</h2>
+        <form method="post" action="/subir" enctype="multipart/form-data">
+            Tema: <input type="text" name="tema"><br><br>
+            Descripción: <br><textarea name="descripcion"></textarea><br><br>
+            Materia: <input type="text" name="materia"><br><br>
+            Archivo: <input type="file" name="archivo"><br><br>
+            <input type="submit" value="Guardar">
+        </form>
+
+        <hr>
+        <h2>Temas guardados</h2>
+        {% for materia, temas_materia in materias.items() %}
+        <h3>{{ materia }}</h3>
+        <ul>
+          {% for tema in temas_materia %}
+            <li>
+              <div onclick="toggleDetalles({{ tema.id }})" style="cursor: pointer; font-weight: bold;">
+                {{ tema.tema }}
+              </div>
+              <div id="detalles-{{ tema.id }}" style="display: none; margin-left: 15px; margin-bottom: 10px;">
+                <p><strong>Descripción:</strong> {{ tema.descripcion }}</p>
+                <p><strong>Fecha de estudio:</strong> {{ tema.fecha }}</p>
+                {% if tema.archivo %}
+                  <p>
+                    <strong>Archivo:</strong>
+                    <a href="/uploads/{{ tema.archivo }}" target="_blank">{{ tema.archivo }}</a>
+                  </p>
+                {% endif %}
+                <p>
+                  <a href="/editar/{{ tema.id }}">✏️ Editar</a> |
+                  <a href="/eliminar/{{ tema.id }}" onclick="return confirm('¿Estás seguro de que quieres eliminar este tema?');">🗑️ Eliminar</a>
+                </p>
+              </div>
+            </li>
+          {% endfor %}
+        </ul>
+      {% endfor %}
+
+    </div>
+
+    <div class="right">
+        <div class="today-box">
+            <h3>🗓 Hoy: {{ hoy }}</h3>
+            {% if temas_hoy %}
+                <p><strong>Temas para repasar:</strong></p>
+                <ul>
+                    {% for t in temas_hoy %}
+                        <li>{{ t }}</li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p>No hay repasos programados para hoy 🎉</p>
+            {% endif %}
+        </div>
+
+        <h2>Calendario de repasos</h2>
+        <div id="calendar"></div>
+        <div id="volver" onclick="restablecerCalendario()">🔁 Ver todos los temas</div>
+    </div>
+
+    <script>
+        let calendario;
+        let eventosOriginales = {{ eventos|safe }};
+
+        document.addEventListener('DOMContentLoaded', function () {
+            const calendarEl = document.getElementById('calendar');
+            calendario = new FullCalendar.Calendar(calendarEl, {
+                initialView: 'dayGridMonth',
+                locale: 'es',
+                headerToolbar: {
+                    left: 'prev,next today',
+                    center: 'title',
+                    right: ''
+                },
+                buttonText: {
+                    today: 'Hoy',
+                    month: 'Mes'
+                },
+                events: eventosOriginales
+            });
+            calendario.render();
+        });
+
+        function filtrarTema(nombre) {
+            const filtrados = eventosOriginales.filter(e => e.group === nombre);
+            calendario.removeAllEvents();
+            filtrados.forEach(e => calendario.addEvent(e));
+            document.getElementById('volver').style.display = 'block';
+        }
+
+        function restablecerCalendario() {
+            calendario.removeAllEvents();
+            eventosOriginales.forEach(e => calendario.addEvent(e));
+            document.getElementById('volver').style.display = 'none';
+        }
+    </script>
+    <script>
+        function toggleDetalles(id) {
+          const detalles = document.getElementById('detalles-' + id);
+          if (detalles) {
+            detalles.style.display = (detalles.style.display === 'none' || detalles.style.display === '') ? 'block' : 'none';
+          }
+        }
+      </script>
+      
+</body>
+</html>
